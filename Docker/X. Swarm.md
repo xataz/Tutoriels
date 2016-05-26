@@ -1,0 +1,629 @@
+# Swarm
+Dans ce chapitre, nous apprendrons à créer un cluster de machine docker. Nous utiliserons virtualbox comme provider.
+Cette partie ne sera pas forcément utile pour tout le monde, mais je pense qu'il est important d'en parler.
+
+## Qu'est ce que Swarm
+Swarm est l'outil de gestion d'un cluster de docker,
+
+Nous créerons d'abord un cluster simple, mais tout à la main, ce qui permettra d'en comprendre le fonctionnement. Ensuite nous créerons un autre cluster avec docker-machine (plus rapide), mais plus complexe, avec une gestion réseau inter-node.
+
+## Création des machines
+Nous allons crée 3 machines esclaves (nommée cls-nodeX), et une machine maitre (nommée cls-master), pour ceci nous utiliserons docker-machine, comme vu dans le chapitre précédent.
+Ayant 32Go de ram sur mon PC, je crée les machines virtuelles avec 2Go de RAM chacune, je laisse le reste par défaut.
+
+Etant une faignasse, je crée une boucle :
+```shell
+$ for machine in master node1 node2 node3; do docker-machine create -d virtualbox --virtualbox-memory "2048" $machine; done
+```
+
+Voilà, nos quatres machines sont créé :
+```shell
+$ docker-machine ls
+NAME         ACTIVE   DRIVER       STATE     URL                         SWARM   DOCKER    ERRORS
+cls-master   -        virtualbox   Running   tcp://192.168.99.100:2376           v1.11.0
+cls-node1    -        virtualbox   Running   tcp://192.168.99.101:2376           v1.11.0
+cls-node2    -        virtualbox   Running   tcp://192.168.99.102:2376           v1.11.0
+cls-node3    -        virtualbox   Running   tcp://192.168.99.103:2376           v1.11.0
+```
+
+## Configuration de master
+Ce serveur sera celui qui contrôlera les autres.
+
+On source donc master :
+```shell
+$ eval $(docker-machine env cls-master)
+```
+
+Comme expliqué tout à l'heure, pour faire fonctionner swarm, il nous faut un discovery, qui peux être un service en ligne, ou un service auto-hébergé.
+Nous utiliserons ici un le discovery de docker, géré par swarm.
+
+On génère donc notre tocken :
+```shell
+$ docker run --rm swarm create
+Unable to find image 'swarm:latest' locally
+latest: Pulling from library/swarm
+8c01723048ed: Pulling fs layer
+28ef38ffcca5: Pulling fs layer
+f1f933319091: Pulling fs layer
+a3ed95caeb02: Pulling fs layer
+a3ed95caeb02: Waiting
+f1f933319091: Verifying Checksum
+f1f933319091: Download complete
+28ef38ffcca5: Verifying Checksum
+28ef38ffcca5: Download complete
+8c01723048ed: Verifying Checksum
+8c01723048ed: Download complete
+a3ed95caeb02: Verifying Checksum
+a3ed95caeb02: Download complete
+8c01723048ed: Pull complete
+28ef38ffcca5: Pull complete
+f1f933319091: Pull complete
+a3ed95caeb02: Pull complete
+Digest: sha256:8b007c8fc861cfaa2f0b9160e6ed3a39109af6e28dfe03982a05158e218bcc52
+Status: Downloaded newer image for swarm:latest
+f0d718e5df0caf7a6fbf6496de482657
+```
+
+Ce qui nous interesse est `f0d718e5df0caf7a6fbf6496de482657`, il nous sera utile pour tout les nodes.
+
+Nous pouvons lancer notre manager :
+```shell
+$ docker run -d -p 3376:3376 -t -v /var/lib/boot2docker:/certs:ro --name swarm-manager swarm manage -H 0.0.0.0:3376 --tlsverify --tlscacert=/certs/ca.pem --tlscert=/certs/server.pem --tlskey=/certs/server-key.pem token://f0d718e5df0caf7a6fbf6496de482657
+9cba87fd0387c76b9020e8794f42ae593c4b13f446e93f0d840552118ee7f44d
+
+$ docker ps
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                              NAMES
+9cba87fd0387        swarm               "/swarm manage -H 0.0"   3 seconds ago       Up 2 seconds        2375/tcp, 0.0.0.0:3376->3376/tcp   swarm-manager
+```
+
+Et voila, notre serveur maitre est configuré. Passons au cls-nodeX
+
+## Configuration des nodes
+
+Nous pouvons attaqué la configuration de nos nodes (ceci sera à faire pour chaque node).
+
+On source le node :
+```shell
+$ eval $(docker-machine env cls-node1)
+```
+
+Et on lance swarm en slave :
+```shell
+$ docker run -d swarm join --addr=$(docker-machine ip cls-node1):2376 token://f0d718e5df0caf7a6fbf6496de482657
+Unable to find image 'swarm:latest' locally
+latest: Pulling from library/swarm
+8c01723048ed: Pulling fs layer
+28ef38ffcca5: Pulling fs layer
+f1f933319091: Pulling fs layer
+a3ed95caeb02: Pulling fs layer
+a3ed95caeb02: Waiting
+f1f933319091: Verifying Checksum
+f1f933319091: Download complete
+28ef38ffcca5: Verifying Checksum
+28ef38ffcca5: Download complete
+a3ed95caeb02: Verifying Checksum
+a3ed95caeb02: Download complete
+8c01723048ed: Verifying Checksum
+8c01723048ed: Download complete
+8c01723048ed: Pull complete
+28ef38ffcca5: Pull complete
+f1f933319091: Pull complete
+a3ed95caeb02: Pull complete
+Digest: sha256:8b007c8fc861cfaa2f0b9160e6ed3a39109af6e28dfe03982a05158e218bcc52
+Status: Downloaded newer image for swarm:latest
+99da3ccbcc63be7ff928ee175a87b1769d3c1f9fc93016270aa9cb4a84a5cb66
+```
+
+Et nous vérifions qu'il tourne bien :
+```shell
+$ docker ps
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS               NAMES
+99da3ccbcc63        swarm               "/swarm join --addr=1"   21 seconds ago      Up 20 seconds       2375/tcp            tiny_kare
+```
+
+Et on recommence pour les deux autres nodes (Je ne vous montre pas, c'est la même chose mais avec node2 et node3), vous pouvez également le lancer sur le cls-master, qui peut servir de manager et de node en même temps. (C'est d'ailleurs ce que j'ai fait)
+
+## Utilisation de swarm
+Swarm sera quasiment transparent, c'est lui qui choisira l'hôte dont il a besoin, en fonction de la charge de ceux-ci et d'autres paramètres.
+
+Nous allons donc sourcer la machine :
+```shell
+$ eval $(docker-machine env cls-master)
+```
+
+Cependant ce n'est pas suffisant, si vous vous souvenez bien, swarm écoute le port 3376, et non 2376 qui lui est le port d'écoute de docker, comme nous pouvons le voir :
+```shell
+$ docker-machine env master
+export DOCKER_TLS_VERIFY="1"
+export DOCKER_HOST="tcp://192.168.99.100:2376"
+export DOCKER_CERT_PATH="C:\Users\xataz\.docker\machine\machines\master"
+export DOCKER_MACHINE_NAME="master"
+# Run this command to configure your shell:
+# eval $("C:\Program Files\Docker Toolbox\docker-machine.exe" env master)
+```
+
+Il nous faut donc exporté à la main la variable DOCKER_HOST :
+```shell
+$ export DOCKER_HOST="tcp://192.168.99.100:3376"
+$ echo $DOCKER_HOST
+tcp://192.168.99.100:3376
+```
+
+Ou alors en une commande :
+```shell
+$ eval $(docker-machine env cls-master | sed 's/2376/3376/')
+```
+
+Maintenant que ceci est fait, nous allons vérifier que cela fonctionne bien :
+```shell
+$ docker info
+Containers: 5
+ Running: 5
+ Paused: 0
+ Stopped: 0
+Images: 4
+Server Version: swarm/1.2.0
+Role: primary
+Strategy: spread
+Filters: health, port, dependency, affinity, constraint
+Nodes: 4
+ cls-master: 192.168.99.100:2376
+  └ Status: Healthy
+  └ Containers: 2
+  └ Reserved CPUs: 0 / 1
+  └ Reserved Memory: 0 B / 2.053 GiB
+  └ Labels: executiondriver=, kernelversion=4.1.19-boot2docker, operatingsystem=Boot2Docker 1.11.0 (TCL 7.0); HEAD : 32ee7e9 - Wed Apr 13 20:06:49 UTC 2016, provider=virtualbox, storagedriver=aufs
+  └ Error: (none)
+  └ UpdatedAt: 2016-04-21T18:27:36Z
+  └ ServerVersion: 1.11.0
+ cls-node1: 192.168.99.101:2376
+  └ Status: Healthy
+  └ Containers: 1
+  └ Reserved CPUs: 0 / 1
+  └ Reserved Memory: 0 B / 2.053 GiB
+  └ Labels: executiondriver=, kernelversion=4.1.19-boot2docker, operatingsystem=Boot2Docker 1.11.0 (TCL 7.0); HEAD : 32ee7e9 - Wed Apr 13 20:06:49 UTC 2016, provider=virtualbox, storagedriver=aufs
+  └ Error: (none)
+  └ UpdatedAt: 2016-04-21T18:27:38Z
+  └ ServerVersion: 1.11.0
+ cls-node2: 192.168.99.102:2376
+  └ Status: Healthy
+  └ Containers: 1
+  └ Reserved CPUs: 0 / 1
+  └ Reserved Memory: 0 B / 2.053 GiB
+  └ Labels: executiondriver=, kernelversion=4.1.19-boot2docker, operatingsystem=Boot2Docker 1.11.0 (TCL 7.0); HEAD : 32ee7e9 - Wed Apr 13 20:06:49 UTC 2016, provider=virtualbox, storagedriver=aufs
+  └ Error: (none)
+  └ UpdatedAt: 2016-04-21T18:27:38Z
+  └ ServerVersion: 1.11.0
+ cls-node3: 192.168.99.103:2376
+  └ Status: Healthy
+  └ Containers: 1
+  └ Reserved CPUs: 0 / 1
+  └ Reserved Memory: 0 B / 2.053 GiB
+  └ Labels: executiondriver=, kernelversion=4.1.19-boot2docker, operatingsystem=Boot2Docker 1.11.0 (TCL 7.0); HEAD : 32ee7e9 - Wed Apr 13 20:06:49 UTC 2016, provider=virtualbox, storagedriver=aufs
+  └ Error: (none)
+  └ UpdatedAt: 2016-04-21T18:27:38Z
+  └ ServerVersion: 1.11.0
+Plugins:
+ Volume:
+ Network:
+Kernel Version: 4.1.19-boot2docker
+Operating System: linux
+Architecture: amd64
+CPUs: 4
+Total Memory: 8.214 GiB
+Name: 9cba87fd0387
+Docker Root Dir:
+Debug mode (client): false
+Debug mode (server): false
+WARNING: No kernel memory limit support
+```
+Nous voyons bien nos 4 nodes.
+
+Et si on lançait un conteneur :
+```shell
+$ docker run -d -P xataz/nginx:1.9
+c9c898b30c0fbe5b16298acab3f00445c9a91bd0dedcd218b4242ad835ca6c70
+```
+
+Puis on regarde ou il tourne :
+```shell
+$ docker ps
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                                                            NAMES
+c9c898b30c0f        xataz/nginx:1.9     "tini -- /usr/bin/sta"   2 seconds ago       Up 2 seconds        192.168.99.101:32769->8080/tcp, 192.168.99.101:32768->8443/tcp   cls-node1/agitated_carson
+```
+On voit qu'il tourne sur le node1.
+
+Testons un deuxième et un troisième :
+```shell
+$ docker run -d -P xataz/nginx:1.9
+1e01fa62a664b64437ba379af8e5fa07b8050e42cb1dab2cce9e0e2a941e161c
+$ docker run -d -P xataz/nginx:1.9
+b32051ffce167b7212256e295acd566ef47a5cd80ee645375b0bc5bcd0ff1321
+```
+
+On regarde ou ils tournent :
+```shell
+$ docker ps
+CONTAINER ID        IMAGE               COMMAND                  CREATED              STATUS              PORTS                                                            NAMES
+b32051ffce16        xataz/nginx:1.9     "tini -- /usr/bin/sta"   3 seconds ago        Up 2 seconds        192.168.99.103:32769->8080/tcp, 192.168.99.103:32768->8443/tcp   cls-node3/hopeful_boyd
+1e01fa62a664        xataz/nginx:1.9     "tini -- /usr/bin/sta"   10 seconds ago       Up 9 seconds        192.168.99.102:32769->8080/tcp, 192.168.99.102:32768->8443/tcp   cls-node2/romantic_boyd
+c9c898b30c0f        xataz/nginx:1.9     "tini -- /usr/bin/sta"   About a minute ago   Up About a minute   192.168.99.101:32769->8080/tcp, 192.168.99.101:32768->8443/tcp   cls-node1/agitated_carson
+```
+
+Je les supprimes :
+```shell
+$ docker rm -f b32 1e c9
+b32
+1e
+c9
+```
+
+Et on va faire un petit test, créer 10 conteneurs nginx (avec une petite boucle de fainéant):
+```shell
+$ i=0; time while [ $i -lt 10 ]; do docker run -d --name nginx${i} -P xataz/nginx:1.9;i=$(($i+1)); done
+28ddd40b6ada3e220b375dbdb293b869fae365b595cc1b7ea7d872661a84c71d
+d72c940c9dc3ad13b4498d8b74910d597134359b6201b72c88943075a6542d5d
+d4f8bfbbc1884a7a2e3e98a3f819617a7ca2a36a4f1b121a25aece490c977b21
+6364046a04631b5762da26071a1dfe3c764176b0e2784d29e4d1f51593599e1b
+20eb3fc1bb23713de0a324937e828e0a824213d554c1a4229588b4303656e354
+c3ff1f045ae48279c01c658334d67303c8aa4d4c2c72706b070eaa1abeda5770
+fbf5bbeb00748d320c6c0872081b7d69eb27a1774b38d53813c3f07ccef51505
+bc4d1c51ec45ce512500f3009b30ea2a79aa4a558ee7170d8dafd4a8ec888135
+2fb1a8a72dc7004787f52e204452474a26bc134c49549b1ffb59e31a0b09205b
+53151725fdd3661bc351910491bcaf0ed51adf04afb0383a4b3bfdb9ae8b9a20
+
+real    0m2.049s
+user    0m0.015s
+sys     0m0.060s
+```
+Je suis toujours impressionné par la rapidité de docker pour créer des conteneur, 2s pour créer 10 conteneurs sur 4 machines différentes.
+
+Bon on vérifie quand même :
+```shell
+$ docker ps
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                                                            NAMES
+53151725fdd3        xataz/nginx:1.9     "tini -- /usr/bin/sta"   14 seconds ago      Up 14 seconds       192.168.99.103:32773->8080/tcp, 192.168.99.103:32772->8443/tcp   cls-node3/nginx9
+2fb1a8a72dc7        xataz/nginx:1.9     "tini -- /usr/bin/sta"   14 seconds ago      Up 14 seconds       192.168.99.100:32771->8080/tcp, 192.168.99.100:32770->8443/tcp   cls-master/nginx8
+bc4d1c51ec45        xataz/nginx:1.9     "tini -- /usr/bin/sta"   14 seconds ago      Up 14 seconds       192.168.99.102:32773->8080/tcp, 192.168.99.102:32772->8443/tcp   cls-node2/nginx7
+fbf5bbeb0074        xataz/nginx:1.9     "tini -- /usr/bin/sta"   15 seconds ago      Up 15 seconds       192.168.99.102:32771->8080/tcp, 192.168.99.102:32770->8443/tcp   cls-node2/nginx6
+c3ff1f045ae4        xataz/nginx:1.9     "tini -- /usr/bin/sta"   15 seconds ago      Up 15 seconds       192.168.99.100:32769->8080/tcp, 192.168.99.100:32768->8443/tcp   cls-master/nginx5
+20eb3fc1bb23        xataz/nginx:1.9     "tini -- /usr/bin/sta"   22 seconds ago      Up 22 seconds       192.168.99.103:32771->8080/tcp, 192.168.99.103:32770->8443/tcp   cls-node3/nginx4
+6364046a0463        xataz/nginx:1.9     "tini -- /usr/bin/sta"   22 seconds ago      Up 22 seconds       192.168.99.101:32771->8080/tcp, 192.168.99.101:32770->8443/tcp   cls-node1/nginx3
+d4f8bfbbc188        xataz/nginx:1.9     "tini -- /usr/bin/sta"   22 seconds ago      Up 22 seconds       192.168.99.102:32769->8080/tcp, 192.168.99.102:32768->8443/tcp   cls-node2/nginx2
+d72c940c9dc3        xataz/nginx:1.9     "tini -- /usr/bin/sta"   29 seconds ago      Up 29 seconds       192.168.99.103:32769->8080/tcp, 192.168.99.103:32768->8443/tcp   cls-node3/nginx1
+28ddd40b6ada        xataz/nginx:1.9     "tini -- /usr/bin/sta"   36 seconds ago      Up 36 seconds       192.168.99.101:32769->8080/tcp, 192.168.99.101:32768->8443/tcp   cls-node1/nginx0
+```
+
+Il est vraiment rapide de multiplier les conteneurs sur un cluster, très pratique avec le script qui va bien de pouvoir gérer un HA proxy par exemple.
+
+## Plus loin avec overlay network
+Overlay network est un protocole qui permets d'encapsuler un réseau virtuel dans du TCP/IP de manière plutôt simple.
+Nous allons recréer un autre cluster, cette fois ci, directement avec docker-machine, mais nous ajouterons un service de discovery consul (qui est plus qu'un simple discovery).
+
+Commençons par supprimer notre précédent cluster :
+```shell
+$ for cls in cls-master cls-node1 cls-node2 cls-node3; do docker-machine stop $cls && docker-machine rm -f $cls; done
+Stopping "cls-master"...
+Machine "cls-master" was stopped.
+About to remove cls-master
+Successfully removed cls-master
+Stopping "cls-node1"...
+Machine "cls-node1" was stopped.
+About to remove cls-node1
+Successfully removed cls-node1
+Stopping "cls-node2"...
+Machine "cls-node2" was stopped.
+About to remove cls-node2
+Successfully removed cls-node2
+Stopping "cls-node3"...
+Machine "cls-node3" was stopped.
+About to remove cls-node3
+Successfully removed cls-node3
+```
+
+Nous créons notre machine qui servira de discovery hors du cluster :
+```shell
+$ docker-machine create -d virtualbox keystore
+```
+Puis nous lançons un conteneur consul :
+```shell
+$ docker run -d -p "8500:8500" -h "consul" progrium/consul -server -bootstrap
+```
+
+Voilà, notre service de discovery est prêt. Nous pouvons créer notre cluster.
+
+Créons d'abord le master :
+```shell
+$ docker-machine create -d virtualbox \
+--swarm --swarm-master \
+--swarm-discovery="consul://$(docker-machine ip keystore):8500" \
+--engine-opt="cluster-store=consul://$(docker-machine ip keystore):8500" \
+--engine-opt="cluster-advertise=eth1:2376" \
+cls-master
+```
+
+* swarm-master : Permets la création d'un master (`swarm manage`).
+* swarm : Permets la création d'un node (`swarm join`).
+* engine-opt : Rajoute une option de lancement à docker-engine, ici nous rajoutons un store, et l'advertise, c'est ceci qui permettra de partager le réseau entre les différents nodes. (A la main, il faudrait modifier le fichier /etc/default/docker, et ajouter les options `--cluster-store` et `--cluster-advertise`).
+
+Puis on crée les nodes :
+```shell
+$ docker-machine create -d virtualbox \
+--swarm \
+--swarm-discovery="consul://$(docker-machine ip keystore):8500" \
+--engine-opt="cluster-store=consul://$(docker-machine ip keystore):8500" \
+--engine-opt="cluster-advertise=eth1:2376" \
+cls-node1
+
+$ docker-machine create -d virtualbox \
+--swarm \
+--swarm-discovery="consul://$(docker-machine ip keystore):8500" \
+--engine-opt="cluster-store=consul://$(docker-machine ip keystore):8500" \
+--engine-opt="cluster-advertise=eth1:2376" \
+cls-node2
+
+$ docker-machine create -d virtualbox \
+--swarm \
+--swarm-discovery="consul://$(docker-machine ip keystore):8500" \
+--engine-opt="cluster-store=consul://$(docker-machine ip keystore):8500" \
+--engine-opt="cluster-advertise=eth1:2376" \
+cls-node3
+```
+
+Et c'est tout, notre cluster est opérationnel. Je vous jure :
+```shell
+$ eval $(docker-machine env --swarm cls-master)
+
+$ docker info
+Containers: 5
+ Running: 5
+ Paused: 0
+ Stopped: 0
+Images: 4
+Server Version: swarm/1.2.0
+Role: primary
+Strategy: spread
+Filters: health, port, dependency, affinity, constraint
+Nodes: 4
+ cls-master: 192.168.99.105:2376
+  └ Status: Healthy
+  └ Containers: 2
+  └ Reserved CPUs: 0 / 1
+  └ Reserved Memory: 0 B / 1.021 GiB
+  └ Labels: executiondriver=, kernelversion=4.1.19-boot2docker, operatingsystem=Boot2Docker 1.11.0 (TCL 7.0); HEAD : 32ee7e9 - Wed Apr 13 20:06:49 UTC 2016, provider=virtualbox, storagedriver=aufs
+  └ Error: (none)
+  └ UpdatedAt: 2016-04-21T18:58:43Z
+  └ ServerVersion: 1.11.0
+ cls-node1: 192.168.99.106:2376
+  └ Status: Healthy
+  └ Containers: 1
+  └ Reserved CPUs: 0 / 1
+  └ Reserved Memory: 0 B / 1.021 GiB
+  └ Labels: executiondriver=, kernelversion=4.1.19-boot2docker, operatingsystem=Boot2Docker 1.11.0 (TCL 7.0); HEAD : 32ee7e9 - Wed Apr 13 20:06:49 UTC 2016, provider=virtualbox, storagedriver=aufs
+  └ Error: (none)
+  └ UpdatedAt: 2016-04-21T18:59:05Z
+  └ ServerVersion: 1.11.0
+ cls-node2: 192.168.99.107:2376
+  └ Status: Healthy
+  └ Containers: 1
+  └ Reserved CPUs: 0 / 1
+  └ Reserved Memory: 0 B / 1.021 GiB
+  └ Labels: executiondriver=, kernelversion=4.1.19-boot2docker, operatingsystem=Boot2Docker 1.11.0 (TCL 7.0); HEAD : 32ee7e9 - Wed Apr 13 20:06:49 UTC 2016, provider=virtualbox, storagedriver=aufs
+  └ Error: (none)
+  └ UpdatedAt: 2016-04-21T18:59:22Z
+  └ ServerVersion: 1.11.0
+ cls-node3: 192.168.99.108:2376
+  └ Status: Healthy
+  └ Containers: 1
+  └ Reserved CPUs: 0 / 1
+  └ Reserved Memory: 0 B / 1.021 GiB
+  └ Labels: executiondriver=, kernelversion=4.1.19-boot2docker, operatingsystem=Boot2Docker 1.11.0 (TCL 7.0); HEAD : 32ee7e9 - Wed Apr 13 20:06:49 UTC 2016, provider=virtualbox, storagedriver=aufs
+  └ Error: (none)
+  └ UpdatedAt: 2016-04-21T18:59:22Z
+  └ ServerVersion: 1.11.0
+Plugins:
+ Volume:
+ Network:
+Kernel Version: 4.1.19-boot2docker
+Operating System: linux
+Architecture: amd64
+CPUs: 4
+Total Memory: 4.085 GiB
+Name: 919ac51aa662
+Docker Root Dir:
+Debug mode (client): false
+Debug mode (server): false
+WARNING: No kernel memory limit support
+```
+
+C'est beaucoup plus simple et plus rapide avec docker-machine, mais il est important de savoir comment monter son cluster sans docker-machine, cela permet une meilleur compréhension du fonctionnement.
+
+Nous allons maintenant voir comment faire faire communiquer des machines les unes avec les autres, tout en étant sur des nodes différent.
+
+Commençons par un docker-compose.yml plutôt simple :
+```
+version: '2'
+
+networks:
+  default:
+    driver: bridge
+
+services:
+  nginx:
+    image: nginx
+    networks:
+      default:
+        aliases:
+          - nginx
+
+  php:
+    image: php:fpm
+```
+
+Nous avons donc 2 conteneurs, qui doivent communiquer ensemble.
+Problème, si je crée ma stack :
+```shell
+$ docker-compose.exe up -d
+Creating docker_nginx_1
+Creating docker_php_1
+
+$ docker ps
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS               NAMES
+73865910e75e        php:fpm             "php-fpm"                3 seconds ago       Up 2 seconds        9000/tcp            cls-master/docker_php_1
+cf519a2ca125        nginx               "nginx -g 'daemon off"   3 seconds ago       Up 2 seconds        80/tcp, 443/tcp     cls-master/docker_nginx_1
+```
+On voit clairement que mes deux conteneurs sont sur le même node.
+Et ceux même si on scale le truc :
+```shell
+$ docker-compose.exe scale nginx=10 php=10
+Creating and starting docker_nginx_2 ... done
+Creating and starting docker_nginx_3 ... done
+Creating and starting docker_nginx_4 ... done
+Creating and starting docker_nginx_5 ... done
+Creating and starting docker_nginx_6 ... done
+Creating and starting docker_nginx_7 ... done
+Creating and starting docker_nginx_8 ... done
+Creating and starting docker_nginx_9 ... done
+Creating and starting docker_nginx_10 ... done
+Creating and starting docker_php_2 ... done
+Creating and starting docker_php_3 ... done
+Creating and starting docker_php_4 ... done
+Creating and starting docker_php_5 ... done
+Creating and starting docker_php_6 ... done
+Creating and starting docker_php_7 ... done
+Creating and starting docker_php_8 ... done
+Creating and starting docker_php_9 ... done
+Creating and starting docker_php_10 ... done
+
+$ docker ps
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS               NAMES
+baab8dc58991        php:fpm             "php-fpm"                11 seconds ago      Up 9 seconds        9000/tcp            cls-master/docker_php_10
+470dba210ca1        php:fpm             "php-fpm"                11 seconds ago      Up 9 seconds        9000/tcp            cls-master/docker_php_5
+b1bfb880c99c        php:fpm             "php-fpm"                11 seconds ago      Up 9 seconds        9000/tcp            cls-master/docker_php_4
+724aeb69465c        php:fpm             "php-fpm"                11 seconds ago      Up 9 seconds        9000/tcp            cls-master/docker_php_3
+6c06038615da        php:fpm             "php-fpm"                11 seconds ago      Up 9 seconds        9000/tcp            cls-master/docker_php_9
+b3abb75b003a        php:fpm             "php-fpm"                11 seconds ago      Up 10 seconds       9000/tcp            cls-master/docker_php_7
+7e9929bc3805        php:fpm             "php-fpm"                11 seconds ago      Up 9 seconds        9000/tcp            cls-master/docker_php_6
+398c266a6269        php:fpm             "php-fpm"                11 seconds ago      Up 9 seconds        9000/tcp            cls-master/docker_php_8
+144de1b8dcb2        php:fpm             "php-fpm"                11 seconds ago      Up 9 seconds        9000/tcp            cls-master/docker_php_2
+6427daf52cf8        nginx               "nginx -g 'daemon off"   12 seconds ago      Up 11 seconds       80/tcp, 443/tcp     cls-master/docker_nginx_4
+12cb3b5d341c        nginx               "nginx -g 'daemon off"   12 seconds ago      Up 10 seconds       80/tcp, 443/tcp     cls-master/docker_nginx_9
+4f22614426f1        nginx               "nginx -g 'daemon off"   12 seconds ago      Up 11 seconds       80/tcp, 443/tcp     cls-master/docker_nginx_8
+b2bc5b7ecf92        nginx               "nginx -g 'daemon off"   12 seconds ago      Up 11 seconds       80/tcp, 443/tcp     cls-master/docker_nginx_10
+5ee79c1dd755        nginx               "nginx -g 'daemon off"   12 seconds ago      Up 10 seconds       80/tcp, 443/tcp     cls-master/docker_nginx_5
+0e2e38ce02ab        nginx               "nginx -g 'daemon off"   12 seconds ago      Up 11 seconds       80/tcp, 443/tcp     cls-master/docker_nginx_6
+396a3fa4ca17        nginx               "nginx -g 'daemon off"   12 seconds ago      Up 11 seconds       80/tcp, 443/tcp     cls-master/docker_nginx_3
+308972afce32        nginx               "nginx -g 'daemon off"   13 seconds ago      Up 11 seconds       80/tcp, 443/tcp     cls-master/docker_nginx_7
+eed9e62a3a01        nginx               "nginx -g 'daemon off"   13 seconds ago      Up 11 seconds       80/tcp, 443/tcp     cls-master/docker_nginx_2
+73865910e75e        php:fpm             "php-fpm"                2 minutes ago       Up 2 minutes        9000/tcp            cls-master/docker_php_1
+cf519a2ca125        nginx               "nginx -g 'daemon off"   2 minutes ago       Up 2 minutes        80/tcp, 443/tcp     cls-master/docker_nginx_1
+```
+
+Donc effectivement, nos machines communiquent, mais c'est pas top, et dans ce cas notre cluster ne sert strictement à rien.
+
+Pour corrigé ceci, nous allons utiliser un réseau *overlay*, celui permettra de communiquer entre les nodes. Et c'est la que consul utilise "toute" sa puissance.
+
+Pour ce faire, dans notre docker-compose.yml :
+```
+version: '2'
+
+networks:
+  default:
+    driver: overlay
+
+services:
+  nginx:
+    image: nginx
+    networks:
+      default:
+        aliases:
+          - nginx
+
+  php:
+    image: php:fpm
+```
+
+On stop et supprime notre stack :
+```shell
+$ docker-compose.exe stop && docker-compose rm -f
+```
+On supprime le network créé par compose :
+```shell
+$ docker network rm docker_default
+```
+et on recrée notre stack:
+```shell
+$ docker-compose up -d
+Creating network "docker_default" with driver "overlay"
+Creating docker_nginx_1
+Creating docker_php_1
+
+$ docker ps
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS               NAMES
+bb241b726dc7        php:fpm             "php-fpm"                10 seconds ago      Up 8 seconds        9000/tcp            cls-node2/docker_php_1
+00c51f680b77        nginx               "nginx -g 'daemon off"   10 seconds ago      Up 8 seconds        80/tcp, 443/tcp     cls-node1/docker_nginx_1
+```
+Maintenant il tourne bien sur des nodes différents, testons la communication :
+```shell
+$ docker exec -ti docker_php_1 ping docker_nginx_1
+PING docker_nginx_1 (10.0.0.2): 56 data bytes
+64 bytes from 10.0.0.2: icmp_seq=0 ttl=64 time=0.413 ms
+64 bytes from 10.0.0.2: icmp_seq=1 ttl=64 time=1.100 ms
+64 bytes from 10.0.0.2: icmp_seq=2 ttl=64 time=1.120 ms
+64 bytes from 10.0.0.2: icmp_seq=3 ttl=64 time=1.151 ms
+64 bytes from 10.0.0.2: icmp_seq=4 ttl=64 time=0.838 ms
+^C--- docker_nginx_1 ping statistics ---
+5 packets transmitted, 5 packets received, 0% packet loss
+round-trip min/avg/max/stddev = 0.413/0.924/1.151/0.279 ms
+
+$ docker exec -ti docker_php_1 ping nginx
+PING nginx (10.0.0.2): 56 data bytes
+64 bytes from 10.0.0.2: icmp_seq=0 ttl=64 time=0.378 ms
+64 bytes from 10.0.0.2: icmp_seq=1 ttl=64 time=1.155 ms
+64 bytes from 10.0.0.2: icmp_seq=2 ttl=64 time=1.081 ms
+^C--- nginx ping statistics ---
+3 packets transmitted, 3 packets received, 0% packet loss
+round-trip min/avg/max/stddev = 0.378/0.871/1.155/0.350 ms
+
+$ docker exec -ti docker_nginx_1 ping docker_php_1
+PING docker_php_1 (10.0.0.3): 56 data bytes
+64 bytes from 10.0.0.3: icmp_seq=0 ttl=64 time=0.422 ms
+64 bytes from 10.0.0.3: icmp_seq=1 ttl=64 time=1.194 ms
+64 bytes from 10.0.0.3: icmp_seq=2 ttl=64 time=1.273 ms
+^C--- docker_php_1 ping statistics ---
+3 packets transmitted, 3 packets received, 0% packet loss
+round-trip min/avg/max/stddev = 0.422/0.963/1.273/0.384 ms
+```
+
+Hey !!! ça marche !!!
+
+Et si on scale le bordel :
+```shell
+$ docker-compose scale nginx=5 php=5
+Creating and starting docker_nginx_2 ... done
+Creating and starting docker_nginx_3 ... done
+Creating and starting docker_nginx_4 ... done
+Creating and starting docker_nginx_5 ... done
+Creating and starting docker_php_2 ... done
+Creating and starting docker_php_3 ... done
+Creating and starting docker_php_4 ... done
+Creating and starting docker_php_5 ... done
+
+$ docker ps
+CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS               NAMES
+49fdea7ba02e        php:fpm             "php-fpm"                6 seconds ago       Up 5 seconds        9000/tcp            cls-master/docker_php_2
+29474ac28a64        php:fpm             "php-fpm"                6 seconds ago       Up 5 seconds        9000/tcp            cls-node3/docker_php_3
+af48170254f8        php:fpm             "php-fpm"                6 seconds ago       Up 5 seconds        9000/tcp            cls-node1/docker_php_5
+831df683abef        php:fpm             "php-fpm"                6 seconds ago       Up 5 seconds        9000/tcp            cls-node3/docker_php_4
+1ad51dd92185        nginx               "nginx -g 'daemon off"   6 seconds ago       Up 6 seconds        80/tcp, 443/tcp     cls-master/docker_nginx_5
+fa3b817c5199        nginx               "nginx -g 'daemon off"   6 seconds ago       Up 6 seconds        80/tcp, 443/tcp     cls-node1/docker_nginx_3
+7164cf15aa83        nginx               "nginx -g 'daemon off"   6 seconds ago       Up 6 seconds        80/tcp, 443/tcp     cls-node2/docker_nginx_4
+51f49569830c        nginx               "nginx -g 'daemon off"   6 seconds ago       Up 6 seconds        80/tcp, 443/tcp     cls-node3/docker_nginx_2
+bb241b726dc7        php:fpm             "php-fpm"                4 minutes ago       Up 4 minutes        9000/tcp            cls-node2/docker_php_1
+00c51f680b77        nginx               "nginx -g 'daemon off"   4 minutes ago       Up 4 minutes        80/tcp, 443/tcp     cls-node1/docker_nginx_1
+```
+
+Et voilà, notre problème est résolu.
+
+## Conclusion
+Nous avons vu ici comment créer un cluster swarm, mais il existe d'autres outils pour faire ceci, comme rancher, ou kubernetes.
