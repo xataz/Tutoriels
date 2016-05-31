@@ -1,6 +1,43 @@
 # Docker-machine
 
+## Qu'est ce que docker-machine
+Docker-machine est un outil qui permet de provisionner des machines (physique ou virtuelle) afin d'y installer le nécessaire pour faire fonctionner docker. Machine permets de provisionner sur virtualbox, mais également beaucoup de service cloud, comme digitalOcean, Azure, Google ou plus générique sur du openstack. Il installera donc docker, mais génère également un certificat ssl, un jeu de clé pour une connexion ssh, et ceux sur de nombreuses distribution GNU/Linux (debian, centos, archlinux ...).
+
+J'ai personnellement commencé à utiliser docker-machine que très récemment, et je trouve cela vraiment indispensable. 
+
 ## Installation
+Lors de la rédaction de ce chapitre, nous sommes à la version 0.7.0 de docker-machine, les liens indiqués sont donc contextualisé avec cette version. Il se peut donc que lors de votre lecture, une autre version sois sortie, pour le vérifier, vous pouvez regarder sur [les releases du github de docker-machine](https://github.com/docker/machine/releases/).
+
+### Sous Windows
+Si vous avez installé boot2docker, docker-machine est déjà pré-installer, sinon l'installation est plutôt simple, il suffit de télécharger l'exécutable :
+[docker-machine 32bits](https://github.com/docker/machine/releases/download/v0.7.0/docker-machine-Windows-i386.exe)
+[docker-machine 64bits](https://github.com/docker/machine/releases/download/v0.7.0/docker-machine-Windows-x86_64.exe)
+
+Il faut ensuite le placer dans un endroit stratégique, personnellement c:\docker\bin, je vous conseille également de le renommer en docker-machine.exe, car c'est pas très pratique de toujours taper docker-machine-Windows-x86_64.exe.
+
+N'oubliez pas de rajouter l'emplacement de votre binaire dans la variable d'environnement PATH afin qu'il soit utilisable partout.
+
+Et normalement cela fonctionne, on teste :
+```shell
+$ docker-machine.exe version
+docker-machine version 0.7.0, build 61388e9
+```
+
+### Sous GNU/Linux et OS X
+L'installation est encore plus simple sous un système Unix, il suffit de télécharger le binaire (sauf si vous avez utilisé la toolbox pour OS X) :
+```shell
+$ wget https://github.com/docker/machine/releases/download/v0.7.0/docker-machine-$(uname -s)-$(uname -m) -O /usr/local/bin/docker-machine
+$ chmod +x /usr/local/bin/docker-machine
+# $(uname -s) : Permets d'obtenir le type d'OS (linux ou darwin)
+# $(uname -m) : Permets d'obtenir l'architecture de l'OS (i386 ou x86_64)
+# Exemple sous OS X : docker-machine-$(uname -s)-$(uname -m) devient docker-machine-darwin-x86_64
+```
+
+Normalement c'est bon, pour tester :
+```shell
+$ docker-machine version
+docker-machine version 0.7.0, build 61388e9
+```
 
 ## Utilisation
 Nous utiliserons docker-machine seulement avec les driver virtualbox, le principe reste cependant le même avec les autres drivers (cf [liste](https://docs.docker.com/machine/drivers/)).

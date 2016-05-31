@@ -1,19 +1,19 @@
 # Swarm
-Dans ce chapitre, nous apprendrons à créer un cluster de machine docker. Nous utiliserons virtualbox comme provider.
-Cette partie ne sera pas forcément utile pour tout le monde, mais je pense qu'il est important d'en parler.
+Dans ce chapitre, nous apprendrons à créer un cluster docker. Nous utiliserons virtualbox comme provider.
+Cette partie n'est qu'une ébauche sur l'utilisation de swarm. Ceci ne sera pas forcément utile pour tout le monde, mais il peut être utile de comprendre le principe.
 
 ## Qu'est ce que Swarm
-Swarm est l'outil de gestion d'un cluster de docker,
+Swarm est l'outil natif de gestion de cluster docker. Il permets de gérer l'ordonnancement des tâches ainsi que l'allocation de ressources par conteneur. Pour simplifier, nous laissons swarm choisir la machine qui exécutera notre conteneur, nous voyons donc l'ensemble des hôtes docker (appellé node) en un seul et unique hôte.
 
 Nous créerons d'abord un cluster simple, mais tout à la main, ce qui permettra d'en comprendre le fonctionnement. Ensuite nous créerons un autre cluster avec docker-machine (plus rapide), mais plus complexe, avec une gestion réseau inter-node.
 
 ## Création des machines
 Nous allons crée 3 machines esclaves (nommée cls-nodeX), et une machine maitre (nommée cls-master), pour ceci nous utiliserons docker-machine, comme vu dans le chapitre précédent.
-Ayant 32Go de ram sur mon PC, je crée les machines virtuelles avec 2Go de RAM chacune, je laisse le reste par défaut.
+Ayant 32Go de ram sur mon PC, je crée les machines virtuelles avec 4Go de RAM chacune, je laisse le reste par défaut.
 
 Etant une faignasse, je crée une boucle :
 ```shell
-$ for machine in master node1 node2 node3; do docker-machine create -d virtualbox --virtualbox-memory "2048" $machine; done
+$ for machine in master node1 node2 node3; do docker-machine create -d virtualbox --virtualbox-memory "4096" cls-${machine}; done
 ```
 
 Voilà, nos quatres machines sont créé :
@@ -34,10 +34,10 @@ On source donc master :
 $ eval $(docker-machine env cls-master)
 ```
 
-Comme expliqué tout à l'heure, pour faire fonctionner swarm, il nous faut un discovery, qui peux être un service en ligne, ou un service auto-hébergé.
-Nous utiliserons ici un le discovery de docker, géré par swarm.
+Pour faire fonctionner swarm, il nous faut un discovery, qui permets de stocker des informations sur les nodes, les conteneurs, leurs emplacements et d'autres informations. Celui qui peut être un service en ligne, ou un service auto-hébergé.
+Nous utiliserons ici le discovery de docker, directement géré par swarm.
 
-On génère donc notre tocken :
+On génère donc notre token :
 ```shell
 $ docker run --rm swarm create
 Unable to find image 'swarm:latest' locally
@@ -66,7 +66,7 @@ f0d718e5df0caf7a6fbf6496de482657
 
 Ce qui nous interesse est `f0d718e5df0caf7a6fbf6496de482657`, il nous sera utile pour tout les nodes.
 
-Nous pouvons lancer notre manager :
+Nous pouvons lancer notre manager :  
 ```shell
 $ docker run -d -p 3376:3376 -t -v /var/lib/boot2docker:/certs:ro --name swarm-manager swarm manage -H 0.0.0.0:3376 --tlsverify --tlscacert=/certs/ca.pem --tlscert=/certs/server.pem --tlskey=/certs/server-key.pem token://f0d718e5df0caf7a6fbf6496de482657
 9cba87fd0387c76b9020e8794f42ae593c4b13f446e93f0d840552118ee7f44d
@@ -370,7 +370,7 @@ $ docker-machine create -d virtualbox \
 cls-node3
 ```
 
-Et c'est tout, notre cluster est opérationnel. Je vous jure :
+Et c'est tout, notre cluster est opérationnel. On vérifie :
 ```shell
 $ eval $(docker-machine env --swarm cls-master)
 
@@ -438,10 +438,10 @@ WARNING: No kernel memory limit support
 
 C'est beaucoup plus simple et plus rapide avec docker-machine, mais il est important de savoir comment monter son cluster sans docker-machine, cela permet une meilleur compréhension du fonctionnement.
 
-Nous allons maintenant voir comment faire faire communiquer des machines les unes avec les autres, tout en étant sur des nodes différent.
+Nous allons maintenant voir comment faire communiquer des machines les unes avec les autres, tout en étant sur des nodes différent.
 
 Commençons par un docker-compose.yml plutôt simple :
-```
+```shell
 version: '2'
 
 networks:
@@ -521,10 +521,10 @@ cf519a2ca125        nginx               "nginx -g 'daemon off"   2 minutes ago  
 
 Donc effectivement, nos machines communiquent, mais c'est pas top, et dans ce cas notre cluster ne sert strictement à rien.
 
-Pour corrigé ceci, nous allons utiliser un réseau *overlay*, celui permettra de communiquer entre les nodes. Et c'est la que consul utilise "toute" sa puissance.
+Pour corrigé ceci, nous allons utiliser un réseau *overlay*, celui ci permettra de communiquer entre les nodes. Et c'est la que consul utilise "toute" sa puissance.
 
 Pour ce faire, dans notre docker-compose.yml :
-```
+```shell
 version: '2'
 
 networks:
