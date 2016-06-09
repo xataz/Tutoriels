@@ -3,19 +3,19 @@
 ## Qu'est ce que docker-machine
 Docker-machine est un outil qui permet de provisionner des machines (physique ou virtuelle) afin d'y installer le nécessaire pour faire fonctionner docker. Machine permets de provisionner sur virtualbox, mais également beaucoup de service cloud, comme digitalOcean, Azure, Google ou plus générique sur du openstack. Il installera donc docker, mais génère également un certificat ssl, un jeu de clé pour une connexion ssh, et ceux sur de nombreuses distribution GNU/Linux (debian, centos, archlinux ...).
 
-J'ai personnellement commencé à utiliser docker-machine que très récemment, et je trouve cela vraiment indispensable. 
+J'ai personnellement commencé à utiliser docker-machine que très récemment, et je trouve cela vraiment indispensable.
 
 ## Installation
 Lors de la rédaction de ce chapitre, nous sommes à la version 0.7.0 de docker-machine, les liens indiqués sont donc contextualisé avec cette version. Il se peut donc que lors de votre lecture, une autre version sois sortie, pour le vérifier, vous pouvez regarder sur [les releases du github de docker-machine](https://github.com/docker/machine/releases/).
 
 ### Sous Windows
-Si vous avez installé boot2docker, docker-machine est déjà pré-installer, sinon l'installation est plutôt simple, il suffit de télécharger l'exécutable :
-[docker-machine 32bits](https://github.com/docker/machine/releases/download/v0.7.0/docker-machine-Windows-i386.exe)
-[docker-machine 64bits](https://github.com/docker/machine/releases/download/v0.7.0/docker-machine-Windows-x86_64.exe)
+Si vous avez installé boot2docker, docker-machine est déjà pré-installer, sinon l'installation est plutôt simple, il suffit de télécharger l'exécutable :  
+[docker-machine 32bits](https://github.com/docker/machine/releases/download/v0.7.0/docker-machine-Windows-i386.exe)  
+[docker-machine 64bits](https://github.com/docker/machine/releases/download/v0.7.0/docker-machine-Windows-x86_64.exe)  
 
 Il faut ensuite le placer dans un endroit stratégique, personnellement c:\docker\bin, je vous conseille également de le renommer en docker-machine.exe, car c'est pas très pratique de toujours taper docker-machine-Windows-x86_64.exe.
 
-N'oubliez pas de rajouter l'emplacement de votre binaire dans la variable d'environnement PATH afin qu'il soit utilisable partout.
+Si vous avez suivi mon tutoriel pour l'installation sous windows, normalement vous ne devriez pas avoir à modifier les variables d'environnement, sinon n'oubliez pas de rajouter l'emplacement de votre binaire dans la variable d'environnement PATH afin qu'il soit utilisable sans devoir être dans le répertoire c:\docker\bin.
 
 Et normalement cela fonctionne, on teste :
 ```shell
