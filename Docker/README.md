@@ -62,6 +62,12 @@ N'hésitez pas à contribuer au Tutoriel, ajout d'information, correction de fau
    * Utilisation des networks
    * Conclusion
 0. Docker compose
+   * Installation
+      * Sous Windows
+      * Sous GNU/Linux
+      * Sous MacOS
+   * Utilisation de docker-compose
+   * Créer une stack web
 0. Docker machine
    * Qu'est ce que docker-machine
    * Installation
