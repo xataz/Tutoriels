@@ -2,7 +2,7 @@
 
 ## Contribution
 Toute contribution est la bienvenue.
-N'hésitez pas à contribuer au Tutoriel, ajout d'information, correction de fautes (il y en a), amélioration etc ...
+N'hésitez pas à contribuer au Tutoriel, ajout d'information, correction de fautes (et il y en a), amélioration etc ...
 
 ## Sommaire
 0. Introduction
