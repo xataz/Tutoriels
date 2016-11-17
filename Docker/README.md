@@ -5,11 +5,11 @@ Toute contribution est la bienvenue.
 N'hésitez pas à contribuer au Tutoriel, ajout d'information, correction de fautes (et il y en a), amélioration etc ...
 
 ## Sommaire
-0. Introduction
-0. Qu'est-ce que Docker
+1. Introduction
+1. Qu'est-ce que Docker
    * Conteneurs VS machines virtuelles
    * Docker, pour quoi faire ?!
-0. Installation
+1. Installation
    * Installation sous Linux
    * Installation sous Windows
       * Docker4Windows
@@ -19,15 +19,16 @@ N'hésitez pas à contribuer au Tutoriel, ajout d'information, correction de fau
       * Docker4Mac
       * Docker-toolbox
    * Mon environnement de test
-0. Les commandes de base
-0. Le DockerHub
+1. Les commandes de base
+1. Le DockerHub
    * Qu'est-ce que le docker hub
    * Chercher une image
-0. Gérer les images
+1. Gérer les images
    * Télécharger des images
    * Lister les images
    * Supprimer les images
-0. Gérer les conteneurs
+   * Conclusion
+1. Gérer les conteneurs
    * Lancer, arrêter et lister des conteneurs
    * Voir les logs des conteneurs
    * Supprimer les conteneurs
@@ -35,7 +36,8 @@ N'hésitez pas à contribuer au Tutoriel, ajout d'information, correction de fau
       * Premier cas : Le développeur
       * Deuxième cas : Installer une application
       * Troisième cas : Le déploiement
-0. Créer une image 
+   * Conclusion
+1. Créer une image 
    * Création d'un Dockerfile
       * Créons une image apache
       * Exemple d'une image lutim
@@ -44,38 +46,44 @@ N'hésitez pas à contribuer au Tutoriel, ajout d'information, correction de fau
       * Limiter les layers
       * Limiter la taille d'une image
       * La lisibilité
-0. Déployer/partager une image
+      * Eviter les processus root
+   * Conclusion
+1. Déployer/partager une image
    * Via un dockerfile
    * Via le docker hub
    * Via une image tar
-0. Limiter les ressources d'un conteneurs
+   * Conclusion
+1. Limiter les ressources d'un conteneurs
    * La mémoire
    * Le CPU
    * L'écriture disque
-0. Docker volume
+   * Conclusion
+1. Docker volume
    * Création d'un volume simple
    * Un peu plus loin
    * Conclusion
-0. Docker network
+1. Docker network
    * Les types de réseaux
    * Création d'un network
    * Utilisation des networks
    * Conclusion
-0. Docker compose
+1. Docker compose
    * Installation
       * Sous Windows
       * Sous GNU/Linux
       * Sous MacOS
    * Utilisation de docker-compose
    * Créer une stack web
-0. Docker machine
+   * Conclusion
+1. Docker machine
    * Qu'est ce que docker-machine
    * Installation
       * Sous Windows
       * Sous GNU/Linux et OS X
    * Utilisation
       * Créer une machine sous virtualbox
-0. Clustering avec Swarm
+   * Conclusion
+1. Clustering avec Swarm
    * Qu'est-ce que Swarm
    * Création de notre cluster
       * Création des machines
@@ -87,14 +95,14 @@ N'hésitez pas à contribuer au Tutoriel, ajout d'information, correction de fau
       * Créons notre cluster
       * Les services
    * Conclusion
-0. Registry
+1. Registry
    * Installation de registry
    * Utilisation
    * Conclusion
-0. Bonus
-   * L'auto Complétion
+1. Bonus
+   * L'auto Completion
    * Docker avec btrfs
-0. Conclusion
-0. Ressources
+1. Conclusion
+1. Ressources
 
 
