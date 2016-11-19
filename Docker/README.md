@@ -2,11 +2,11 @@
 
 ## Contribution
 Toute contribution est la bienvenue.
-N'hésitez pas à contribuer au Tutoriel, ajout d'information, correction de fautes (et il y en a), amélioration etc ...
+N'hésitez pas à contribuer au Tutoriel, ajout d'information, correction de fautes (et il y en a), amélioration, etc...
 
 ## Sommaire
 1. Introduction
-1. Qu'est-ce que Docker
+1. Qu'est-ce que Docker ?
    * Conteneurs VS machines virtuelles
    * Docker, pour quoi faire ?!
 1. Installation
@@ -15,13 +15,13 @@ N'hésitez pas à contribuer au Tutoriel, ajout d'information, correction de fau
       * Docker4Windows
       * Docker-toolbox
       * Installation manuelle
-   * Install sous Mac
+   * Installation sous Mac
       * Docker4Mac
       * Docker-toolbox
    * Mon environnement de test
 1. Les commandes de base
 1. Le DockerHub
-   * Qu'est-ce que le docker hub
+   * Qu'est-ce que le docker hub ?
    * Chercher une image
 1. Gérer les images
    * Télécharger des images
@@ -37,7 +37,7 @@ N'hésitez pas à contribuer au Tutoriel, ajout d'information, correction de fau
       * Deuxième cas : Installer une application
       * Troisième cas : Le déploiement
    * Conclusion
-1. Créer une image 
+1. Créer une image
    * Création d'un Dockerfile
       * Créons une image apache
       * Exemple d'une image lutim
@@ -46,14 +46,14 @@ N'hésitez pas à contribuer au Tutoriel, ajout d'information, correction de fau
       * Limiter les layers
       * Limiter la taille d'une image
       * La lisibilité
-      * Eviter les processus root
+      * Éviter les processus root
    * Conclusion
 1. Déployer/partager une image
    * Via un dockerfile
    * Via le docker hub
    * Via une image tar
    * Conclusion
-1. Limiter les ressources d'un conteneurs
+1. Limiter les ressources d'un conteneur
    * La mémoire
    * Le CPU
    * L'écriture disque
@@ -76,7 +76,7 @@ N'hésitez pas à contribuer au Tutoriel, ajout d'information, correction de fau
    * Créer une stack web
    * Conclusion
 1. Docker machine
-   * Qu'est ce que docker-machine
+   * Qu'est-ce que docker-machine ?
    * Installation
       * Sous Windows
       * Sous GNU/Linux et OS X
@@ -84,7 +84,7 @@ N'hésitez pas à contribuer au Tutoriel, ajout d'information, correction de fau
       * Créer une machine sous virtualbox
    * Conclusion
 1. Clustering avec Swarm
-   * Qu'est-ce que Swarm
+   * Qu'est-ce que Swarm ?
    * Création de notre cluster
       * Création des machines
       * Configuration de master
@@ -104,5 +104,3 @@ N'hésitez pas à contribuer au Tutoriel, ajout d'information, correction de fau
    * Docker avec btrfs
 1. Conclusion
 1. Ressources
-
-
