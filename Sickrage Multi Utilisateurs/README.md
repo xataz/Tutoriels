@@ -1,39 +1,45 @@
-Bonjour à tous,
+# Sickrage Multi-Utilisateurs
 
-Il y a quelques temps, je suis tombé sur sickrage, via le tutoriel créé sur ce forum par [b]adaur[/b]. Sickrage est presque parfait, la seul chose qui lui manque (à mon avis), est le fait qu'il ne sois pas multi-utilisateurs, j'ai donc trouvé une solution pour pouvoir le faire, et je viens donc vous la partager.
+Il y a quelques temps, je suis tombé sur sickrage, via le tutoriel créé sur ce forum par **adaur**. Sickrage est presque parfait, la seul chose qui lui manque (à mon avis), est le fait qu'il ne sois pas multi-utilisateurs, j'ai donc trouvé une solution pour pouvoir le faire, et je viens donc vous la partager.
 
-Afin de ne pas refaire la même présentation de sickrage que [b]adaur[/b], je vous renvoie plutôt sur son [url=http://mondedie.fr/d/6429]sujet[/url]. Je mets également quelques citations de lui pour reprendre l'installation de base. Sur ce tuto je me base sur sickrage, mais ceci fonctionne parfaitement sur la version originale de sickbeard.
-
-
-On commence.
+Afin de ne pas refaire la même présentation de sickrage que **adaur**, je vous renvoie plutôt sur son [sujet](http://mondedie.fr/d/6429). Je mets également quelques citations de lui pour reprendre l'installation de base. Sur ce tuto je me base sur sickrage, mais ceci fonctionne parfaitement sur la version originale de sickbeard.
 
 
-[color=#ff0000][b][u]1. Installation des prérequis :[/u][/b][/color]
+
+## Installation des prérequis
 On commence par installer python, son module cheetah et git. Si vous ne les avez pas, ça donne ça:
-[code]$ apt-get install git-core python python-cheetah[/code]
+```shell
+$ apt-get install git-core python python-cheetah
+```
 
-[color=#ff0000][b][u]2. Installation de sickbeard:[/u][/b][/color]
+## Installation de sickbeard
 On télécharge et installe sickbeard:
-[code]$ git clone https://github.com/SickRage/SickRage /opt/sickrage
-cd /opt/sickrage[/code]
+```shell
+$ git clone https://github.com/SickRage/SickRage /opt/sickrage
+$ cd /opt/sickrage
+```
 
 Personnellement je le mets dans opt, mais à vous de choisir.
 On lui donne les droits de l'utilisateur principal (pour moi c'est xataz, c'est moi l'admin ^^) :
-[code]$ chown -R xataz:xataz /opt/sickrage[/code]
+```shell
+$ chown -R xataz:xataz /opt/sickrage
+```
 
 De cette manière seul vous pourrez mettre à jour sickbeard, les autres utilisateurs aurons par contre des messages dans la logs, mais rien de méchants.
 
-Jusque là pas de changement par rapport au tutoriel de [b]adaur[/b], mais c'est la que ça change.
+Jusque là pas de changement par rapport au tutoriel de **adaur**, mais c'est la que ça change.
 
 
-[color=#ff0000][b][u]3. Le multi-utilisateurs:[/u][/b][/color]
+## Le multi-utilisateurs:
 Celui ci resemble au multi-utilisateurs de rtorrent/rutorrent, un fichier d'execution par utilisateur, un fichier de configuration par utilisateur, et une authentification nginx (plus proxypass, rien de compliqué).
 Pour pouvoir faire du multi user, j'ai modifié le script init.ubuntu :
 
 Donc on crée notre fichier pour notre utilisateur :
-[code]$ nano /etc/init.d/sickrage_xataz[/code]
+```shell
+$ nano /etc/init.d/sickrage_xataz
+```
 et on copie ceci :
-[code]
+```shell
 #!/bin/bash
 #
 ### BEGIN INIT INFO
@@ -145,52 +151,62 @@ case "$1" in
 esac
 
 exit 0
-[/code]
+```
 
 Les seuls choses à modifier sont :
-[code]
+```shell
 # Provides:          sickrage_xataz
 SR_USER=xataz
 SR_INSTALL=/opt/sickrage
-[/code]
+```
 
 SR_USER est le nom de votre utilisateur, et SR_INSTALL est le répertoire d'installation, si vous avez mis un répertoire différent au mien.
 
 
 Un petit chmod pour le rendre exécutable :
-[code]$ chmod +x /etc/init.d/sickrage_xataz[/code]
+```shell
+$ chmod +x /etc/init.d/sickrage_xataz
+```
 
 Ce qu'on va faire, c'est lancer ce script, cela permettra de créé les fichiers pour votre utilisateur, et on l'arrête aussi tôt :
-[code]$ /etc/init.d/sickrage_xataz start && /etc/init.d/sickrage_xataz stop[/code]
+```shell
+$ /etc/init.d/sickrage_xataz start && /etc/init.d/sickrage_xataz stop
+```
 
 Voila les fichiers de configuration ce sont créé tous seul dans /opt/sickrage/data/xataz (si vous avez le même répertoire d'installation que moi).
 On ouvre le fichier config.ini pour apporté quelques modification :
-[code]$ nano /opt/sickrage/data/xataz/config.ini [/code]
+```shell
+$ nano /opt/sickrage/data/xataz/config.ini 
+```
 et on modifie ceci :
-[code]
+```shell
 web_root = "/sickrage" # Pour un accès par http://monip/sickrage
 web_port = 20001 # personnellement j'ai commencé à 20001, ne laisser pas 8081, car c'est le port par défault de sickbeard, donc a chaque nouvelle utilisateurs, il recréra le fichier avec ce port, et ceci bloquera le démarrage de l'application
 torrent_dir = /home/xataz/downloads/.watch/ # le répertoire watch de rtorrent, la ou sickbeard téléchargera les .torrents
-[/code]
+```
 Et c'est tous.
 
 
 Maintenant on ajoute le démarrage automatique de l'application au démarrage du serveur :
-[code]$ update-rc.d sickrage_xataz defaults[/code]
+```shell
+$ update-rc.d sickrage_xataz defaults
+```
 
 
 Et voila, l'étape 3 est à faire pour chaque utilisateurs.
 
 
 
-[color=#ff0000][b][u]4. Configuration de nginx :[/u][/b][/color]
+# Configuration de nginx :
 Afin de pouvoir y accéder directement via l'url (https://monip/sickrage), il va falloir modifier la configuration de nginx, rien de bien méchants.
 Nous allons utilisé l'authentification de nginx, plûtot que celle de sickrage.
 
 Pour ce faire rien de bien compliqué, il suffit de modifier le fichier /etc/nginx/sites-enabled/rutorrent.conf :
-[code]$ nano /etc/nginx/sites-enabled/rutorrent.conf[/code]
+```shell
+$ nano /etc/nginx/sites-enabled/rutorrent.conf
+```
 Et d'ajouter après :
-[code]
+```shell
 location ^~ /rutorrent {
 	root /var/www;
 	include /etc/nginx/conf.d/php.conf;
@@ -204,9 +220,9 @@ location ^~ /rutorrent {
 		deny all;
 	}
     }
-[/code]
+```
 Ceci :
-[code]
+```shell
 location /sickrage {
                 proxy_set_header X-Real-IP $remote_addr;
                 proxy_set_header X-Forwarded-For $remote_addr;
@@ -222,21 +238,23 @@ location /sickrage {
                 }
         }
 
-[/code]
+```
 
 Pour vous expliquer rapidement, si l'utilisateur tape dans son navigateur http://monip/sickrage, Nginx vérifie l'utilisateur connecté, en fonction de l'utilisateur, il "redirige" vers le bon port.
 Si mon utilisateur est xataz, il redirige vers le port 20001, précédemment configurer. Si l'utilisateur est test, vers le port 20002, etc ....
 
 Puis on relance nginx :
-[code]
+```shell
 $ /etc/init.d/nginx restart
-[/code]
+```
 
 Donc voila pour ce tutoriel.
 Je rappel que la configuration de base (partie 1 et 2) sont totalement tiré du tutoriel de [b]adaur[/b], pour le reste c'est bien de moi. 
 
+## Contribution
+Toute contribution est la bienvenue.  
+N'hésitez pas à contribuer au Tutoriel, ajout d'information, correction de fautes (et il y en a), amélioration etc ...  
+Ça se passe [ici](https://github.com/xataz/Tutoriels)  
 
-@+
-
-EDIT : Modification du daemon pour une compatibilité avec debian 8.
-EDIT 2 : Modification de la configuration nginx + config sickrage
+## Questions
+Toute question sur la [discussion](https://mondedie.fr/d/6676) ou sur [github](https://github.com/xataz/Tutoriels/issues)
