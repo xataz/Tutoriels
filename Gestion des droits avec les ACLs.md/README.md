@@ -293,7 +293,7 @@ Voila pour ce tutoriel, c'est bref, mais j'espère que j'ai bien expliqué le pr
 
 ## Contribution
 Toute contribution est la bienvenue.  
-N'hésitez pas à contribuer au Tutoriel, ajout d'information, correction de fautes (et il y en a), amélioration etc ...  
+N'hésitez pas à contribuer aux Tutoriels, ajout d'information, correction de fautes (et il y en a), amélioration etc ...  
 Ça se passe [ici](https://github.com/xataz/Tutoriels)  
 
 ## Questions
