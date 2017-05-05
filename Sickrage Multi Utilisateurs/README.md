@@ -176,13 +176,14 @@ $ /etc/init.d/sickrage_xataz start && /etc/init.d/sickrage_xataz stop
 Voila les fichiers de configuration ce sont créé tous seul dans /opt/sickrage/data/xataz (si vous avez le même répertoire d'installation que moi).
 On ouvre le fichier config.ini pour apporté quelques modification :
 ```shell
-$ nano /opt/sickrage/data/xataz/config.ini 
+$ nano /opt/sickrage/data/xataz/config.ini
 ```
 et on modifie ceci :
 ```shell
 web_root = "/sickrage" # Pour un accès par http://monip/sickrage
 web_port = 20001 # personnellement j'ai commencé à 20001, ne laisser pas 8081, car c'est le port par défault de sickbeard, donc a chaque nouvelle utilisateurs, il recréra le fichier avec ce port, et ceci bloquera le démarrage de l'application
 torrent_dir = /home/xataz/downloads/.watch/ # le répertoire watch de rtorrent, la ou sickbeard téléchargera les .torrents
+web_host = 127.0.0.1 # pour que sickrage écoute que sur localhost, donc protéger par le auth de nginx
 ```
 Et c'est tous.
 
@@ -249,12 +250,12 @@ $ /etc/init.d/nginx restart
 ```
 
 Donc voila pour ce tutoriel.
-Je rappel que la configuration de base (partie 1 et 2) sont totalement tiré du tutoriel de [b]adaur[/b], pour le reste c'est bien de moi. 
+Je rappel que la configuration de base (partie 1 et 2) sont totalement tiré du tutoriel de [b]adaur[/b], pour le reste c'est bien de moi.
 
 ## Contribution
-Toute contribution est la bienvenue.  
-N'hésitez pas à contribuer aux Tutoriels, ajout d'information, correction de fautes (et il y en a), amélioration etc ...  
-Ça se passe [ici](https://github.com/xataz/Tutoriels)  
+Toute contribution est la bienvenue.
+N'hésitez pas à contribuer aux Tutoriels, ajout d'information, correction de fautes (et il y en a), amélioration etc ...
+Ça se passe [ici](https://github.com/xataz/Tutoriels)
 
 ## Questions
 Toute question sur la [discussion](https://mondedie.fr/d/6676) ou sur [github](https://github.com/xataz/Tutoriels/issues)
